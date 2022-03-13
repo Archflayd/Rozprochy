@@ -31,15 +31,10 @@ public class Client {
                 while (true) {
                     try {
                         String response = in.readLine();
-                        System.out.println("\n" + response);
+                        System.out.println(response);
 
-                        // prints the username after displaying the server's message
-                        if (userName != null) {
-                            System.out.print("[" + userName + "]: ");
-                        }
                     } catch (IOException ex) {
-                        System.out.println("Error reading from server: " + ex.getMessage());
-                        ex.printStackTrace();
+                        System.out.println(ex.getMessage());
                         break;
                     }
                 }
@@ -47,14 +42,13 @@ public class Client {
             receiver.start();
 
             Thread sender = new Thread(() -> {
+
                 Scanner scanner = new Scanner(System.in);
 
                 userName = scanner.nextLine();
-
                 out.println(userName);
 
                 String message;
-
                 do {
                     message = scanner.nextLine();
                     out.println(message);
