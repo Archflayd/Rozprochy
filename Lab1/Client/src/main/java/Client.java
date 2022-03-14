@@ -6,7 +6,7 @@ import java.util.Scanner;
 public class Client {
     private static String hostname = "localhost";
     private static int port = 12345;
-    private int multicastPort = 123456;
+    private int multicastPort = 12346;
     private String userName;
 
     private BufferedReader in;

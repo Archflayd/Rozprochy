@@ -24,11 +24,9 @@ public class Server {
 
                     while (true) {
                         Socket socket = serverSocket.accept();
-
                         ClientThreadTCP newUser = new ClientThreadTCP(socket, this);
                         clientThreadsTCP.add(newUser);
                         newUser.start();
-
                     }
 
                 } catch (IOException ex) {

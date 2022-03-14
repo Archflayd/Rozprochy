@@ -9,9 +9,6 @@ public class ClientsThreadUDP extends Thread {
     private Server server;
     private int bufferLength = 1024;
 
-    private BufferedReader in;
-    private PrintWriter out;
-
     public ClientsThreadUDP(DatagramSocket socketUDP, Server server) {
         this.socketUDP = socketUDP;
         this.server = server;

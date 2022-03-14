@@ -42,7 +42,7 @@ public class ClientThreadTCP extends Thread {
             server.broadcastTCP("[Server]: " + userName + " left the chat", this);
 
         } catch (IOException ex) {
-            System.out.println("Client TCP thread error: " + ex.getMessage());
+            System.out.println("Client TCP left: " + ex.getMessage());
         }
     }
 

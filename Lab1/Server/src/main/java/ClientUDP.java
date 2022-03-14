@@ -10,12 +10,4 @@ public class ClientUDP {
         this.clientAddress = clientAddress;
     }
 
-    @Override
-    public boolean equals(Object o){
-        if(this.getClass() == o.getClass()){
-            ClientUDP c = (ClientUDP) o;
-            return c.clientPort == this.clientPort && c.clientAddress == this.clientAddress;
-        }
-        return false;
-    }
 }
