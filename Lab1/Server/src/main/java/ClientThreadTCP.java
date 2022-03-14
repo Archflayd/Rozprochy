@@ -1,14 +1,14 @@
 import java.io.*;
 import java.net.Socket;
 
-public class ClientThread extends Thread {
+public class ClientThreadTCP extends Thread {
     private Socket socket;
     private Server server;
 
     private BufferedReader in;
     private PrintWriter out;
 
-    public ClientThread(Socket socket, Server server) {
+    public ClientThreadTCP(Socket socket, Server server) {
         this.socket = socket;
         this.server = server;
     }
@@ -25,7 +25,7 @@ public class ClientThread extends Thread {
             String userName = in.readLine();
             server.addUserName(userName);
 
-            server.broadcast("[Server]: " + userName + " connected to the chat", this);
+            server.broadcastTCP("[Server]: " + userName + " connected to the chat", this);
 
             String message;
 
@@ -33,16 +33,16 @@ public class ClientThread extends Thread {
                 message = in.readLine();
                 if(message.equals("exit"))
                     break;
-                server.broadcast("[" + userName + "]: " + message, this);
+                server.broadcastTCP("[" + userName + "]: " + message, this);
             }
 
             server.removeUser(userName, this);
             socket.close();
 
-            server.broadcast("[Server]: " + userName + " left the chat", this);
+            server.broadcastTCP("[Server]: " + userName + " left the chat", this);
 
         } catch (IOException ex) {
-            System.out.println(ex.getMessage());
+            System.out.println("Client TCP thread error: " + ex.getMessage());
         }
     }
 

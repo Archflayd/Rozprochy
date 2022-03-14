@@ -1,51 +1,60 @@
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class Server {
     private static int port = 12345;
     private Set<String> userNames = new HashSet<>();
-    private Set<ClientThread> ClientThreads = new HashSet<>();
+    private Set<ClientThreadTCP> clientThreadsTCP = new HashSet<>();
+    public Set<ClientUDP> clientsUDP = new HashSet<>();
 
     public Server(int port) {
         this.port = port;
     }
 
-    public void execute() {
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
+    public void execute() throws SocketException {
 
-            System.out.println("Server running on port: " + port);
+            Thread listenerTCP = new Thread(() -> {
+                try (ServerSocket serverSocket = new ServerSocket(port)) {
 
-            while (true) {
-                Socket socket = serverSocket.accept();
+                    System.out.println("Server running on port: " + port);
 
-                ClientThread newUser = new ClientThread(socket, this);
-                ClientThreads.add(newUser);
-                newUser.start();
+                    while (true) {
+                        Socket socket = serverSocket.accept();
 
-            }
+                        ClientThreadTCP newUser = new ClientThreadTCP(socket, this);
+                        clientThreadsTCP.add(newUser);
+                        newUser.start();
 
-        } catch (IOException ex) {
-            System.out.println(ex.getMessage());
-        }
+                    }
+
+                } catch (IOException ex) {
+                    System.out.println("Server tcp listener error: " + ex.getMessage());
+                }
+            });
+            listenerTCP.start();
+
+
+        DatagramSocket socketUDP = new DatagramSocket(port);
+
+        ClientsThreadUDP clientsThreadUDP = new ClientsThreadUDP(socketUDP, this);
+        clientsThreadUDP.start();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SocketException {
 
         Server server = new Server(port);
         server.execute();
     }
 
-    void broadcast(String message, ClientThread sender) {
-        System.out.println(">>> " + message);
-        for (ClientThread clientThread : ClientThreads) {
-            if (clientThread != sender) {
-                clientThread.sendMessage(message);
+    void broadcastTCP(String message, ClientThreadTCP sender) {
+        System.out.println(message + " (TCP)");
+        for (ClientThreadTCP clientThreadTCP : clientThreadsTCP) {
+            if (clientThreadTCP != sender) {
+                clientThreadTCP.sendMessage(message);
             }
         }
     }
@@ -54,9 +63,9 @@ public class Server {
         userNames.add(userName);
     }
 
-    void removeUser(String userName, ClientThread sender) {
+    void removeUser(String userName, ClientThreadTCP sender) {
         userNames.remove(userName);
-        ClientThreads.remove(sender);
+        clientThreadsTCP.remove(sender);
     }
 
 }
