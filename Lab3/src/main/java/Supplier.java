@@ -7,24 +7,28 @@ import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeoutException;
 
 public class Supplier extends Thread {
 
     private final String[] supplies;
     private final String exchangeName;
+    private final String name;
+    private int orderNo = 0;
 
-    public Supplier(String[] supplies, String exchangeName){
+    public Supplier(String[] supplies, String exchangeName, String name){
         this.supplies = supplies;
+        for(int i = 0; i < supplies.length; i++){
+            supplies[i] += ".*";
+        }
         this.exchangeName = exchangeName;
+        this.name = name;
     }
 
     public void run() {
 
-        // connection & channel
         Channel channel;
         try{
             ConnectionFactory factory = new ConnectionFactory();
@@ -37,35 +41,33 @@ public class Supplier extends Thread {
             return;
         }
 
-        // exchange, queues
         String queueName;
         try{
-            channel.exchangeDeclare(exchangeName, BuiltinExchangeType.DIRECT);
-            queueName = channel.queueDeclare().getQueue();
+            channel.exchangeDeclare(exchangeName, BuiltinExchangeType.TOPIC);
 
-            for(String key : supplies)
+            for(String key : supplies) {
+                queueName = channel.queueDeclare(key, false, false, true, null).getQueue();
                 channel.queueBind(queueName, exchangeName, key);
+
+                Consumer consumer = new DefaultConsumer(channel) {
+                    @Override
+                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                        String message = new String(body, "UTF-8");
+                        System.out.println(name + " received order: " + message + " order no: " + orderNo);
+                        orderNo++;
+                        String response = '$' + name + '-' + orderNo + '-' + message;
+                        System.out.println(name + " sending order: " + response);
+                        channel.basicPublish(exchangeName, response, null, response.getBytes(StandardCharsets.UTF_8));
+                        channel.basicAck(envelope.getDeliveryTag(), false);
+                    }
+                };
+                channel.basicConsume(queueName, false, consumer);
+            }
         }catch(IOException e){
             System.out.println("Error creating queues. " + e.getMessage());
             return;
         }
 
-        // consumption
-        Consumer consumer = new DefaultConsumer(channel) {
-            @Override
-            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-                String message = new String(body, "UTF-8");
-                System.out.println("Received: " + message);
-                channel.basicAck(envelope.getDeliveryTag(), false);
-            }
-        };
-
-        // start listening
-        System.out.println("Waiting for messages...");
-        try {
-            channel.basicConsume(queueName, false, consumer);
-        } catch (IOException e) {
-            System.out.println("Error consuming. " + e.getMessage());
-        }
+        System.out.println(name + " waiting for orders...");
     }
 }

@@ -1,22 +1,21 @@
-import com.rabbitmq.client.BuiltinExchangeType;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.*;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
-public class Expeditor extends Thread{
+public class Expeditor {
 
-    private final String exchangeName;
+    private static final String exchangeName = "EX4";
 
-    public Expeditor(String exchangeName){
-        this.exchangeName = exchangeName;
-    }
+    public static void main(String[] args) {
 
-    public void run() {
+        Random random = new Random();
+        int id = random.nextInt(1000, 9999);
+        System.out.println("Expeditor id " + id);
 
         // connection & channel
         Channel channel;
@@ -33,7 +32,22 @@ public class Expeditor extends Thread{
 
         // exchange
         try {
-            channel.exchangeDeclare(exchangeName, BuiltinExchangeType.DIRECT);
+            channel.exchangeDeclare(exchangeName, BuiltinExchangeType.TOPIC);
+
+            String key = "*." + String.valueOf(id);
+            String queueName = channel.queueDeclare(key, false, false, true, null).getQueue();
+            channel.queueBind(queueName, exchangeName, key);
+
+            Consumer consumer = new DefaultConsumer(channel) {
+                @Override
+                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                    String message = new String(body, "UTF-8");
+                    if(message.startsWith("$"))
+                        System.out.println("Order finished: " + message.substring(1));
+                    channel.basicAck(envelope.getDeliveryTag(), false);
+                }
+            };
+            channel.basicConsume(queueName, false, consumer);
         } catch (IOException e) {
             System.out.println("Error creating exchange. " + e.getMessage());
             return;
@@ -41,7 +55,6 @@ public class Expeditor extends Thread{
 
         while (true) {
 
-            // read msg
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
             System.out.println("Enter order: ");
             String order;
@@ -52,12 +65,11 @@ public class Expeditor extends Thread{
                 return;
             }
 
-            // break condition
             if ("exit".equals(order)) {
                 break;
             }
 
-            // publish
+            order = order + '.' + id;
             try {
                 channel.basicPublish(exchangeName, order, null, order.getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
